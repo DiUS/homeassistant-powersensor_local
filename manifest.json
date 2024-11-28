@@ -1,0 +1,18 @@
+{
+  "domain": "powersensor_local",
+  "name": "Powersensor (local)",
+  "codeowners": [
+    "@jmattsson"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/DiUS/homeassistant-powersensor_local",
+  "homekit": {},
+  "iot_class": "local_push",
+  "requirements": [
+    "powersensor-local==1.0.2"
+  ],
+  "ssdp": [],
+  "zeroconf": [],
+  "version": "1.0.2"
+}
