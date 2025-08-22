@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -43,6 +41,8 @@ class PowersensorDevicesManager:
             if mac in self._loaded.keys():
                 for entity in self._loaded[mac]:
                     entity.set_available(True)
+            elif self._onFound:
+                await self._onFound(mac, msg)
         elif (msg['event'] == 'device_lost'):
             del self._found[mac]
             if mac in self._loaded.keys():
@@ -56,15 +56,14 @@ class PowersensorDevicesManager:
                 for cb in cb_list:
                     await cb(msg)
 
-    def get_newfound(self):
-        """Returns the {mac,evt} list of devices which have not already been
-        added to HomeAssistant.
-        """
-        out = dict()
+    async def set_found_callback(self, handler: Callable[[str, dict], Awaitable[None]]):
+        """Sets the callback to invoke on new devices found."""
+        self._onFound = handler
+        if not handler:
+            return
         for mac in self._found:
             if not mac in self._loaded.keys():
-                out[mac] = self._found[mac]
-        return out
+                await handler(mac, self._found[mac])
 
     def mark_loaded(self, mac: str, entity: Entity):
         """Mark a device as loaded, and provide the entity for future reference."""
@@ -120,9 +119,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: powersensor_localConfigE
     psm = PowersensorDevicesManager(hass)
     entry.runtime_data = psm
     await psm.start()
-    await asyncio.sleep(33) # Enough time for 30sec samplers to come through
 
-    # TODO: can we call this later too if we discover additional devices?
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
@@ -130,8 +127,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: powersensor_localConfigE
 
 async def async_unload_entry(hass: HomeAssistant, entry: powersensor_localConfigEntry) -> bool:
     """Unload a config entry."""
-    #await hass.config_entries.async_forward_entry_unload(entry, PLATFORMS)
     psm = entry.runtime_data
     await psm.stop()
-    result = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    return result
+    return hass.config_entries.async_unload_platforms(entry, PLATFORMS)

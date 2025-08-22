@@ -9,10 +9,10 @@
   "documentation": "https://github.com/DiUS/homeassistant-powersensor_local",
   "homekit": {},
   "iot_class": "local_push",
+  "issue_tracker": "https://github.com/DiUS/homeassistant-powersensor_local/issues",
   "requirements": [
     "powersensor-local==1.0.2"
   ],
-  "ssdp": [],
-  "zeroconf": [],
+  "single_config_entry": true,
   "version": "1.0.2"
 }

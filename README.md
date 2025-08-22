@@ -1,6 +1,6 @@
 # Local Powersensor integration for HomeAssistant
 
-A minimal spike project to get a feel for how much effort would be required
+A minimal project to get a feel for how much effort would be required
 to implement full Powersensor support for HomeAssistant.
 
 This integration only uses the network-local interface to source data from
@@ -14,7 +14,8 @@ create the `custom_components/` directory yourself.
 
 To add the integration, go to Settings -> Integrations -> Add Integration
 and search for "Powersensor (local)". It will automatically discover the
-Powersensor devices on your network. This takes 30+ seconds.
+Powersensor devices on your network. To discovery all devices may take just
+over 30 seconds.
 
 If for some reason not all devices were discovered, you can disable and
 re-enable the integration to force a new discovery.

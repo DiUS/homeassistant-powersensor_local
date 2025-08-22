@@ -24,13 +24,14 @@ class PsSensorEntity(SensorEntity):
     should_poll = False
     _attr_has_entity_name = True
 
-    def __init__(self, psm:PowersensorDevicesManager, evt: dict, name: str, devclass, unit, event: str, key: str, formatter):
+    def __init__(self, psm:PowersensorDevicesManager, evt: dict, name: str, devclass, unit, event: str, key: str, formatter, precision: int):
         self._psm = psm
         self._mac = evt['mac']
         self._typ = evt['device_type']
 
         self.device_class = devclass
         self._attr_name = name
+        self._attr_friendly_name = name
         self._attr_native_unit_of_measurement = unit
         self._attr_available = True
         self._attr_unique_id = f"{format_mac(self._mac)}_{event}_{key}"
@@ -38,6 +39,7 @@ class PsSensorEntity(SensorEntity):
         self._event = event
         self._key = key
         self._formatter = formatter
+        self._attr_suggested_display_precision = precision
 
         self._model = f"Powersensor{' Plug' if self._typ=='plug' else ''}"
         self._device_name = f"{self._model} ({self._mac})"
@@ -74,17 +76,17 @@ class PsSensorEntity(SensorEntity):
 
 
 FMT_INT = lambda f: int(f)
-FMT_3DEC = lambda f: "{:.3f}".format(f)
+FMT_3DEC = lambda f: f"{f:.3f}"
 FMT_NONEGINT = lambda f: int(max(0, f))
 
 SUPPORTED_DEVICE_ENTITIES = {
     'sensor': (
-        ('Power', SensorDeviceClass.POWER, UnitOfPower.WATT, 'average_power', 'watts', FMT_INT),
-        ('Battery Level (Volts)', SensorDeviceClass.VOLTAGE, UnitOfElectricPotential.VOLT, 'battery_level', 'volts', FMT_3DEC)
+        ('Power', SensorDeviceClass.POWER, UnitOfPower.WATT, 'average_power', 'watts', FMT_INT, 0),
+        ('Battery Level (Volts)', SensorDeviceClass.VOLTAGE, UnitOfElectricPotential.VOLT, 'battery_level', 'volts', FMT_3DEC, 3)
     ),
     'plug': [
-        ('Power', SensorDeviceClass.POWER, UnitOfPower.WATT, 'average_power', 'watts', FMT_NONEGINT),
-        ('Mains Voltage', SensorDeviceClass.VOLTAGE, UnitOfElectricPotential.VOLT, 'voltage', 'volts', FMT_3DEC)
+        ('Power', SensorDeviceClass.POWER, UnitOfPower.WATT, 'average_power', 'watts', FMT_NONEGINT, 0),
+        ('Mains Voltage', SensorDeviceClass.VOLTAGE, UnitOfElectricPotential.VOLT, 'voltage', 'volts', FMT_3DEC, 3)
     ]
 }
 
@@ -97,13 +99,14 @@ async def async_setup_entry(
     """Add sensors for passed config_entry in HA."""
     psm = config_entry.runtime_data
 
-    new_devices = []
-    for mac,evt in psm.get_newfound().items():
+    async def add_found(mac: str, evt: dict):
         devtype = evt['device_type']
         if devtype in SUPPORTED_DEVICE_ENTITIES:
+            entities = []
             descriptions = SUPPORTED_DEVICE_ENTITIES[devtype]
             for desc in descriptions:
-                new_devices.append(PsSensorEntity(psm, evt, *desc))
+                entities.append(PsSensorEntity(psm, evt, *desc))
+            async_add_entities(entities)
 
-    if new_devices:
-        async_add_entities(new_devices)
+    # Dynamically add as devices are found
+    await psm.set_found_callback(add_found)
