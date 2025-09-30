@@ -8,6 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import Entity
 
 from powersensor_local import PowersensorDevices
+from powersensor_local import VirtualHousehold
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
@@ -19,6 +20,7 @@ class PowersensorDevicesManager:
         self._found: dict[str,dict] = dict()
         self._subscribed = dict() # {[mac]: { [evname]: (cb, cb...) }}
         self._loaded: dict[str,list[Entity]] = dict() # [mac]: (Entity, ...)
+        self.vhh = VirtualHousehold(False) # FIXME, need to remember if solar
 
     async def start(self):
         """Start listening for Powersensor device events."""
@@ -55,6 +57,13 @@ class PowersensorDevicesManager:
                 cb_list = dev[ev]
                 for cb in cb_list:
                     await cb(msg)
+            try:
+                if ev == 'average_power':
+                    await self.vhh.process_average_power_event(msg)
+                if ev == 'summation_energy':
+                    await self.vhh.process_summation_event(msg)
+            except Exception as e:
+                print('OOOPSIE', e)
 
     async def set_found_callback(self, handler: Callable[[str, dict], Awaitable[None]]):
         """Sets the callback to invoke on new devices found."""
@@ -129,4 +138,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: powersensor_localConfig
     """Unload a config entry."""
     psm = entry.runtime_data
     await psm.stop()
-    return hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    return True
