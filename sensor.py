@@ -122,7 +122,7 @@ class PsSensorEntity(SensorEntity):
         """Callback for consuming event messages."""
         if self._key in msg:
             val = msg[self._key]
-            if 'role' in msg and msg['role'] == 'solar':
+            if 'role' in msg and msg['role'] == 'solar' and self._key != 'volts':
                 val = self._clamp_solar_value(val)
             self._attr_native_value = self._formatter(val)
             sru = 'summation_resettime_utc'
